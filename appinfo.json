@@ -1,0 +1,9 @@
+{
+	"id": "com.palm.app.pretop",
+	"version": "1.0.0",
+	"vendor": "CS242",
+	"type": "web",
+	"main": "index.html",
+	"title": "PreTop",
+	"icon": "icon.png"
+}
