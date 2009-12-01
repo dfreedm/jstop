@@ -5,6 +5,6 @@
 	"type": "web",
 	"main": "index.html",
 	"title": "JSTop",
-	"icon": "icon.png"
+	"icon": "icon.png",
 	"removable": "true"
 }
