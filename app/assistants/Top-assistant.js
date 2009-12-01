@@ -225,7 +225,7 @@ TopAssistant.prototype.appendList = function(event) {
 	Mojo.Log.info("HeapCapacity: " + jsHeapCapacity);
 	var jsRemaining = jsHeapCapacity - jsHeapSize;
 	Mojo.Log.info("Remaining: " + jsRemaining);
-	var title = "PreTop" + "<br/>Memory Usable: " + jsHeapCapacity + "<br/>Memory Used: " + jsHeapSize + "<br/>Memory Left: " + jsRemaining;
+	var title = "Javascript Resource Monitor" + "<br/>Memory Usable: " + jsHeapCapacity + "<br/>Memory Used: " + jsHeapSize + "<br/>Memory Left: " + jsRemaining;
 	Mojo.Log.info("New Title: " + title);
 	this.controller.get("top_header").update(title);
 };
