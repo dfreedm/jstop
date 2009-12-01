@@ -25,7 +25,7 @@ TopAssistant.prototype.setup = function() {
 	/* Set a fake item, Give a title to the list */
 	this.listModel = {
 		listTitle: 'Running Processes',
-		items: [{process:"hi",pid:"9999",nodes:"-1",serviceHandles:0}]
+		items: [{process:"Something has gone horribly wrong",pid:"9999",nodes:"-1",serviceHandles:0}]
 	};
 
 	/* Create the list widget */
@@ -225,7 +225,7 @@ TopAssistant.prototype.appendList = function(event) {
 	Mojo.Log.info("HeapCapacity: " + jsHeapCapacity);
 	var jsRemaining = jsHeapCapacity - jsHeapSize;
 	Mojo.Log.info("Remaining: " + jsRemaining);
-	var title = "Javascript Resource Monitor" + "<br/>Memory Usable: " + jsHeapCapacity + "<br/>Memory Used: " + jsHeapSize + "<br/>Memory Left: " + jsRemaining;
+	var title = "Javascript Resource Monitor" + "<br/>Total Heap Size: " + jsHeapCapacity + "<br/>Heap Used: " + jsHeapSize + "<br/>Heap Left: " + jsRemaining;
 	Mojo.Log.info("New Title: " + title);
 	this.controller.get("top_header").update(title);
 };
