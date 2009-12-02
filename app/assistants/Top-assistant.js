@@ -86,11 +86,11 @@ TopAssistant.prototype.garbageCollect = function() {
 
 /* Handle the tap on the list item */
 TopAssistant.prototype.handleTap = function(event) {
-	if (event.originalEvent.target.tagName == "SPAN")
-	{
+	//if (event.originalEvent.target.tagName == "SPAN")
+	//{
 		var f = this.confirmKill.bind(this);
 		f(event);
-	}
+	//}
 }
 
 /* Confirm that you REALLY want to kill this item */
@@ -152,7 +152,7 @@ TopAssistant.prototype.cleanup = function(event) {
 
 /* Calls the service which knows about application statistics */
 TopAssistant.prototype.updateList = function() {
-	Mojo.Log.info("Attempt to get Luna VM stats");
+	//Mojo.Log.info("Attempt to get Luna VM stats");
 	/* Message com.palm.lunastats to give the VM stats */
 	this.controller.serviceRequest('palm://com.palm.lunastats', {
 		method: 'getStats',
@@ -165,11 +165,14 @@ TopAssistant.prototype.updateList = function() {
 
 /* Append the real processes to the Process List */
 TopAssistant.prototype.appendList = function(event) {
+	/* regex for splitting the process name */
+	var regPalm = new RegExp("^com.palm.[app\.]{0,4}(.*)?");
+	var regApp = new RegExp("^[^\.]+\.[^\.]+\.(.*)?");
 	/* sort by preference */
 	var sorter = function (a,b) {
 		var x = a;
 		var y = b;
-		Mojo.Log.info("sortPref is: %s",this.sortPref);
+		//Mojo.Log.info("sortPref is: %s",this.sortPref);
 		if (this.sortPref == 'nodes')
 		{
 			x = parseInt(a.nodes);
@@ -188,7 +191,7 @@ TopAssistant.prototype.appendList = function(event) {
 	}
 	/* Array holding all the processes */
 	var processes = new Array();
-	Mojo.Log.info("Add processes to list");
+	//Mojo.Log.info("Add processes to list");
 	/* Loop over all the processes */
 	var docLength = event.documents.length;
 	for (var i = 0; i < docLength; i++)
@@ -199,35 +202,43 @@ TopAssistant.prototype.appendList = function(event) {
 		if (namePid)
 		{
 			/* Construct a JSON object that has the process name, pid, and node count numbers */
-			var str = {process:namePid[1],pid:namePid[2],nodes:event.documents[i].nodes,serviceHandles:event.documents[i].openServiceHandles};
+			var nameShort = namePid[1];
+			var isPalm = false;
+			var matchPalm = nameShort.match(regPalm);
+			if (matchPalm) { nameShort = matchPalm[1]; isPalm = true; }
+			var matchApp = nameShort.match(regApp);
+			if (matchApp[1]) { nameShort = matchApp[1]; isPalm = false; }
+			var str = {process:namePid[1],processShort:nameShort,processClass:(isPalm?'palm':''),pid:namePid[2],nodes:event.documents[i].nodes,serviceHandles:event.documents[i].openServiceHandles};
 			/* Append to processes array */
 			processes.push(str);
-			Mojo.Log.info("Process name: %s",str.process);
-			Mojo.Log.info("Pid: %s",str.pid);
+			//Mojo.Log.info("Process name: %s",str.process);
+			//Mojo.Log.info("Pid: %s",str.pid);
 		}
 		else
 		{
 			Mojo.Log.info("Bad appId");
 		}
 	}
-	Mojo.Log.info("Sorting list");
+	//Mojo.Log.info("Sorting list");
 	/* Sort list */
 	processes = processes.sort(sorter.bind(this));
-	Mojo.Log.info("Pushing new items");
+	//Mojo.Log.info("Pushing new items");
 	/* Add the list of processes to the GUI list */
 	this.controller.get("top_list").mojo.setLength(processes.length);
 	this.controller.get("top_list").mojo.noticeUpdatedItems(0,processes);
 
 	/* Update the Title with JavaScript Heap info */
 	var jsHeapSize = event.counters.jsHeapSize;
-	Mojo.Log.info("HeapSize: " + jsHeapSize);
+	//Mojo.Log.info("HeapSize: " + jsHeapSize);
 	var jsHeapCapacity = event.counters.jsHeapCapacity;
-	Mojo.Log.info("HeapCapacity: " + jsHeapCapacity);
+	//Mojo.Log.info("HeapCapacity: " + jsHeapCapacity);
 	var jsRemaining = jsHeapCapacity - jsHeapSize;
-	Mojo.Log.info("Remaining: " + jsRemaining);
+	//Mojo.Log.info("Remaining: " + jsRemaining);
 	var title = "Javascript Resource Monitor" + "<br/>Total Heap Size: " + jsHeapCapacity + "<br/>Heap Used: " + jsHeapSize + "<br/>Heap Left: " + jsRemaining;
-	Mojo.Log.info("New Title: " + title);
-	this.controller.get("top_header").update(title);
+	//Mojo.Log.info("New Title: " + title);
+	//this.controller.get("top_header").update(title);
+	this.controller.get("heap_progress").update(this.formatSize(jsHeapSize));
+	this.controller.get("heap_progress").style.width = Math.round((jsHeapSize/jsHeapCapacity) * 100) + 'px';
 };
 
 /* Something bad happened getting the VM statistics */
@@ -248,4 +259,26 @@ TopAssistant.prototype.popupBad = function(event){
 		var f = this.appendList.bind(this);
 		f(event);
 	}
+}
+
+/* format bytes to easier to read value */
+TopAssistant.prototype.formatSize = function(size)
+{
+	var toReturn = size + ' B';
+	var formatSize = size;
+	
+	if (formatSize > 1024)
+	{
+		formatSize = (Math.round((formatSize / 1024) * 100) / 100);
+		toReturn = formatSize + ' KB';
+	}
+	if (formatSize > 1024)
+	{
+		formatSize = (Math.round((formatSize / 1024) * 100) / 100);
+		toReturn = formatSize + ' MB';
+	}
+	// I don't think we need to worry about GB here...
+	
+	// return formatted size
+	return toReturn;
 }

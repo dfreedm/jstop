@@ -1,5 +1,8 @@
-<div class='palm-row' x-mojo-tap-highlight='delayed'>
+<div class="palm-row" x-mojo-tap-highlight="delayed">
 	<div class="palm-row-wrapper">
-		<span class="palm-body-text">#{process} #{pid} #{nodes} #{serviceHandles}</span>
+		<div class="pid">#{pid}</div>
+		<div class="name #{processClass}">#{processShort}</div>
+		<div class="nodes">#{nodes}</div>
+		<div class="handles">#{serviceHandles}</div>
 	</div>
 </div>

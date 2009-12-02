@@ -1,7 +1,23 @@
-<center><div id="top_header" class="palm-page-header">Javascript Resource Monitor</div></center>
-<div class="palm-group">
-    <div class="palm-group-title" style="text-align:center">Name | PID | DOM Nodes | Service Handles</div>
-    <div class="palm-list">
-        <div x-mojo-element="List" id="top_list"></div>
-    </div>
+<div class="palm-page-header multi-line">
+	<div class="palm-page-header-wrapper">
+		<div class="header">Javascript Resource Monitor</div>
+		<div class="header-progress">
+			<div id="heap_progress" class="bar"></div>
+		</div>
+		<div class="list-header-wrapper">
+			<div class="pid">PID</div>
+			<div class="name">Name</div>
+			<div class="nodes">Nodes</div>
+			<div class="handles">Handles</div>
+			<br class="clear" />
+		</div>
+	</div>
 </div>
+
+<div class="palm-header-spacer"></div>
+
+<div class="palm-list">
+	<div x-mojo-element="List" id="top_list"></div>
+</div>
+
+<div class="fade-bottom" x-mojo-scroll-fade="bottom"></div>
