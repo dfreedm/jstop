@@ -42,7 +42,7 @@ TopAssistant.prototype.setup = function() {
 	this.controller.listen("top_list", Mojo.Event.listTap, this.handleTap.bind(this));
 	/* Default sort preference is by # of open service handles */
 	this.sortPref = "serviceHandles";
-	this.interval = setInterval(this.updateList.bind(this),5000);
+	//this.interval = setInterval(this.updateList.bind(this),5000);
 }
 
 /* handler for app menu buttons */
@@ -142,7 +142,7 @@ TopAssistant.prototype.activate = function(event) {
 TopAssistant.prototype.deactivate = function(event) {
 	/* remove any event handlers you added in activate and do any other cleanup that should happen before
 	   this scene is popped or another scene is pushed on top */
-	clearInterval(this.interval);
+//	clearInterval(this.interval);
 }
 
 TopAssistant.prototype.cleanup = function(event) {
@@ -156,7 +156,7 @@ TopAssistant.prototype.updateList = function() {
 	/* Message com.palm.lunastats to give the VM stats */
 	this.controller.serviceRequest('palm://com.palm.lunastats', {
 		method: 'getStats',
-		parameters: {},
+		parameters: {subscribe:true},
 		//For some reason, onSuccess never happens :(
 		onSuccess: this.appendList.bind(this),
 		onFailure: this.popupBad.bind(this)
