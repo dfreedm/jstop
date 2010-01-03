@@ -34,7 +34,11 @@ TopAssistant.prototype.setup = function() {
 	/* Create the app menu */
 	this.controller.setupWidget(Mojo.Menu.appMenu,this.attributes={omitDefaultItems:true},this.model={
 		visible:true,
-		items:[{label:"Sort by open service handles",command:"sh"},{label:"Sort by memory usage",command:"mem"},{label:"Garbage Collect JavaScript Heap",command:"gc"},{label:"Refresh List",command:"refresh"}]
+		items:[
+			{label:"Sort by open service handles",command:"sh"}
+			,{label:"Sort by memory usage",command:"mem"}
+			,{label:"Garbage Collect JavaScript Heap",command:"gc"}
+		]
 	});
 	/* add event handlers to listen to events from widgets */
 
@@ -43,6 +47,8 @@ TopAssistant.prototype.setup = function() {
 	/* Default sort preference is by # of open service handles */
 	this.sortPref = "serviceHandles";
 	//this.interval = setInterval(this.updateList.bind(this),5000);
+	/* Holder of the last process list, keep it around so reordering list doesn't need to poll lunastats */
+	this.lastList = {};
 }
 
 /* handler for app menu buttons */
@@ -54,10 +60,6 @@ TopAssistant.prototype.handleCommand = function(event) {
 		{
 			case 'gc':
 				f = this.garbageCollect.bind(this);
-				f();
-				break;
-			case 'refresh':
-				Mojo.Log.info("Refresh the screen");
 				f();
 				break;
 			case 'sh':
@@ -79,9 +81,8 @@ TopAssistant.prototype.garbageCollect = function() {
 	this.controller.serviceRequest('palm://com.palm.lunastats',{
 		method: 'gc',
 		parameters: {},
+		onComplete: function(){}
 	});
-	var f = this.updateList.bind(this);
-	f();
 }
 
 /* Handle the tap on the list item */
@@ -165,6 +166,11 @@ TopAssistant.prototype.updateList = function() {
 
 /* Append the real processes to the Process List */
 TopAssistant.prototype.appendList = function(event) {
+	/* replay last process list if we just want to reorder list */
+	if (event === undefined)
+	{
+		event = this.lastList;
+	}
 	/* regex for splitting the process name */
 	var regPalm = new RegExp("^com.palm.[app\.]{0,4}(.*)?");
 	var regApp = new RegExp("^[^\.]+\.[^\.]+\.(.*)?");
@@ -239,6 +245,7 @@ TopAssistant.prototype.appendList = function(event) {
 	//this.controller.get("top_header").update(title);
 	this.controller.get("heap_progress").update(this.formatSize(jsHeapSize));
 	this.controller.get("heap_progress").style.width = Math.round((jsHeapSize/jsHeapCapacity) * 100) + 'px';
+	this.lastList = event;
 };
 
 /* Something bad happened getting the VM statistics */
