@@ -25,7 +25,7 @@ TopAssistant.prototype.setup = function() {
 	/* Set a fake item, Give a title to the list */
 	this.listModel = {
 		listTitle: 'Running Processes',
-		items: [{process:"Something has gone horribly wrong",pid:"9999",nodes:"-1",serviceHandles:0}]
+		items: [{process:"this.broke.horribly",pid:"9999",nodes:"-1",serviceHandles:0}]
 	};
 
 	/* Create the list widget */
