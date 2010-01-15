@@ -81,7 +81,7 @@ TopAssistant.prototype.garbageCollect = function() {
 	this.controller.serviceRequest('palm://com.palm.lunastats',{
 		method: 'gc',
 		parameters: {},
-		onComplete: this.updateList.bind(this)
+		onComplete: this.appendList.bind(this)
 	});
 }
 
