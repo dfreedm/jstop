@@ -53,7 +53,7 @@ TopAssistant.prototype.setup = function() {
 
 /* handler for app menu buttons */
 TopAssistant.prototype.handleCommand = function(event) {
-	var f = this.updateList.bind(this);
+	var f = this.appendList.bind(this);
 	if (event.type === Mojo.Event.command)
 	{
 		switch(event.command)
@@ -64,11 +64,11 @@ TopAssistant.prototype.handleCommand = function(event) {
 				break;
 			case 'sh':
 				this.sortPref = "serviceHandles";
-				f();
+				f(this.lastList);
 				break;
 			case 'mem':
 				this.sortPref = "nodes";
-				f();
+				f(this.lastList);
 				break;
 			default: break;
 		}
@@ -81,17 +81,14 @@ TopAssistant.prototype.garbageCollect = function() {
 	this.controller.serviceRequest('palm://com.palm.lunastats',{
 		method: 'gc',
 		parameters: {},
-		onComplete: function(){}
+		onComplete: this.updateList.bind(this)
 	});
 }
 
 /* Handle the tap on the list item */
 TopAssistant.prototype.handleTap = function(event) {
-	//if (event.originalEvent.target.tagName == "SPAN")
-	//{
-		var f = this.confirmKill.bind(this);
-		f(event);
-	//}
+	var f = this.confirmKill.bind(this);
+	f(event);
 }
 
 /* Confirm that you REALLY want to kill this item */
@@ -153,24 +150,21 @@ TopAssistant.prototype.cleanup = function(event) {
 
 /* Calls the service which knows about application statistics */
 TopAssistant.prototype.updateList = function() {
-	//Mojo.Log.info("Attempt to get Luna VM stats");
 	/* Message com.palm.lunastats to give the VM stats */
 	this.controller.serviceRequest('palm://com.palm.lunastats', {
 		method: 'getStats',
 		parameters: {subscribe:true},
 		//For some reason, onSuccess never happens :(
-		onSuccess: this.appendList.bind(this),
-		onFailure: this.popupBad.bind(this)
+		onComplete: this.appendList.bind(this),
 	});
 }
 
 /* Append the real processes to the Process List */
 TopAssistant.prototype.appendList = function(event) {
-	/* replay last process list if we just want to reorder list */
-	if (event === undefined)
-	{
-		event = this.lastList;
-	}
+	/* save event */
+	this.lastList = event;
+	/* Used for debugging purposes */
+	//for (var i in event.documents[0]) {Mojo.Log.info(i);}
 	/* regex for splitting the process name */
 	var regPalm = new RegExp("^com.palm.[app\.]{0,4}(.*)?");
 	var regApp = new RegExp("^[^\.]+\.[^\.]+\.(.*)?");
@@ -178,7 +172,6 @@ TopAssistant.prototype.appendList = function(event) {
 	var sorter = function (a,b) {
 		var x = a;
 		var y = b;
-		//Mojo.Log.info("sortPref is: %s",this.sortPref);
 		if (this.sortPref == 'nodes')
 		{
 			x = parseInt(a.nodes);
@@ -217,56 +210,34 @@ TopAssistant.prototype.appendList = function(event) {
 			var str = {process:namePid[1],processShort:nameShort,processClass:(isPalm?'palm':''),pid:namePid[2],nodes:event.documents[i].nodes,serviceHandles:event.documents[i].openServiceHandles};
 			/* Append to processes array */
 			processes.push(str);
-			//Mojo.Log.info("Process name: %s",str.process);
-			//Mojo.Log.info("Pid: %s",str.pid);
 		}
 		else
 		{
 			Mojo.Log.info("Bad appId");
 		}
 	}
-	//Mojo.Log.info("Sorting list");
 	/* Sort list */
 	processes = processes.sort(sorter.bind(this));
-	//Mojo.Log.info("Pushing new items");
 	/* Add the list of processes to the GUI list */
 	this.controller.get("top_list").mojo.setLength(processes.length);
 	this.controller.get("top_list").mojo.noticeUpdatedItems(0,processes);
 
 	/* Update the Title with JavaScript Heap info */
-	var jsHeapSize = event.counters.jsHeapSize;
-	//Mojo.Log.info("HeapSize: " + jsHeapSize);
-	var jsHeapCapacity = event.counters.jsHeapCapacity;
-	//Mojo.Log.info("HeapCapacity: " + jsHeapCapacity);
-	var jsRemaining = jsHeapCapacity - jsHeapSize;
-	//Mojo.Log.info("Remaining: " + jsRemaining);
-	var title = "Javascript Resource Monitor" + "<br/>Total Heap Size: " + jsHeapCapacity + "<br/>Heap Used: " + jsHeapSize + "<br/>Heap Left: " + jsRemaining;
-	//Mojo.Log.info("New Title: " + title);
-	//this.controller.get("top_header").update(title);
+	/* 1.3.5 changed the JSON response, keeping backward compatibility with older devices */
+	if (event.counters.jsHeap == undefined)
+	{
+		var jsHeapSize = event.counters.jsHeapSize;
+		var jsHeapCapacity = event.counters.jsHeapCapacity;
+	}
+	else
+	{
+		var jsHeapSize = event.counters.jsHeap.used;
+		var jsHeapCapacity = event.counters.jsHeap.capacity;
+	}
+	//TODO: Useful metrics in new event.counters.jsHeap: see full_counter_api.txt
 	this.controller.get("heap_progress").update(this.formatSize(jsHeapSize));
 	this.controller.get("heap_progress").style.width = Math.round((jsHeapSize/jsHeapCapacity) * 100) + 'px';
-	this.lastList = event;
 };
-
-/* Something bad happened getting the VM statistics */
-TopAssistant.prototype.popupBad = function(event){
-	Mojo.Log.info("Ah, what happened?");
-	Mojo.Log.info("Got errorCode %s",event.errorCode);
-	Mojo.Log.info("Got errorText %s",event.errorText);
-	Mojo.Log.info("All parts");
-	for (var method in event)
-	{
-		Mojo.Log.info(method);
-	}
-	/* popupBad gets called even though the call to lunastats succeded. WTF!!!
-	 * Therefore, check if we got the json object we wanted */
-	if (event.documents)
-	{
-		Mojo.Log.info(event.documents);
-		var f = this.appendList.bind(this);
-		f(event);
-	}
-}
 
 /* format bytes to easier to read value */
 TopAssistant.prototype.formatSize = function(size)
