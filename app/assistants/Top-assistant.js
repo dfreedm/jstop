@@ -17,7 +17,8 @@ TopAssistant.prototype.setup = function() {
 	this.listAttributes = {
 		// Template for how to display list items
 		itemTemplate: 'Top/itemTemplate',
-		swipeToDelete: false,
+		swipeToDelete: true,
+		autoConfirmDelete: true,
 		reorderable: false,
 	};
 	Mojo.Log.info("Set up list model");
@@ -25,7 +26,7 @@ TopAssistant.prototype.setup = function() {
 	/* Set a fake item, Give a title to the list */
 	this.listModel = {
 		listTitle: 'Running Processes',
-		items: [{process:"this.broke.horribly",pid:"9999",nodes:"-1",serviceHandles:0}]
+		items: [{process:"..this.broke.horribly",pid:"9999",nodes:"-1",serviceHandles:0}]
 	};
 
 	/* Create the list widget */
@@ -44,6 +45,8 @@ TopAssistant.prototype.setup = function() {
 
 	/* Set up the listener for tapping on list items */
 	this.controller.listen("top_list", Mojo.Event.listTap, this.handleTap.bind(this));
+	/* swipe to delete will kill the app (auto confirmation) */
+	this.controller.listen("top_list", Mojo.Event.listDelete, this.killProcess.bind(this));
 	/* Default sort preference is by # of open service handles */
 	this.sortPref = "serviceHandles";
 	//this.interval = setInterval(this.updateList.bind(this),5000);
@@ -87,13 +90,25 @@ TopAssistant.prototype.garbageCollect = function() {
 
 /* Handle the tap on the list item */
 TopAssistant.prototype.handleTap = function(event) {
-	var f = this.confirmKill.bind(this);
-	f(event);
+	var f = this.fireBanner.bind(this);
+	f("Tracking " + event.item.processShort);
+}
+
+/* Say we are GC'ing automagically */
+TopAssistant.prototype.autoGC = function() {
+	var f = this.fireBanner.bind(this);
+	f("Auto GC'ing");
+}
+
+/* Fire a banner */
+TopAssistant.prototype.fireBanner = function(app) {
+	var bannerParams = {messageText: app};
+	this.controller.showBanner(bannerParams, {}, "");
 }
 
 /* Confirm that you REALLY want to kill this item */
 TopAssistant.prototype.confirmKill = function(event) {
-	var f = this.killProcess.bind(this);
+	var f = Mojo.doNothing();
 	var affirm = function(transport)
 	{
 		if (transport)
@@ -103,10 +118,10 @@ TopAssistant.prototype.confirmKill = function(event) {
 	}
 	this.controller.showAlertDialog({
 		onChoose:affirm,
-		title:"Are you sure?",
+		title:"Track this apps usage?",
 		choices:[
-			{label:"Kill it!",value:true,type:'affirmative'},
-			{label:"No, don't do that!", value:false,type:'negative'}
+			{label:"Track it", value:true,type:'affirmative'},
+			{label:"Nevermind", value:false,type:'negative'}
 		]
 	});
 }
