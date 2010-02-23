@@ -7,6 +7,13 @@ function TopAssistant() {
 
 TopAssistant.prototype.setup = function() {
 	/* this function is for setup tasks that have to happen when the scene is first created */
+	this.cookie = new Mojo.Model.Cookie("jstop");
+	this.prefs = this.cookie.get();
+	if (this.prefs == null) {
+		var temp = {autoGC:false};
+		this.cookie.put(temp);
+		this.prefs = temp;
+	}
 
 	/* use Mojo.View.render to render view templates and add them to the scene, if needed. */
 
@@ -20,25 +27,32 @@ TopAssistant.prototype.setup = function() {
 		swipeToDelete: true,
 		autoConfirmDelete: true,
 		reorderable: false,
+		fixedHeightItems: true,
+		preventDeleteProperty: "nokill"
 	};
 	Mojo.Log.info("Set up list model");
 
 	/* Set a fake item, Give a title to the list */
 	this.listModel = {
 		listTitle: 'Running Processes',
-		items: [{process:"..this.broke.horribly",pid:"9999",nodes:"-1",serviceHandles:0}]
+		items: [{process:"broken.this has broken",pid:"9999",nodes:"-1",serviceHandles:0,nokill:true}]
 	};
 
 	/* Create the list widget */
 	this.controller.setupWidget("top_list",this.listAttributes,this.listModel);
 
 	/* Create the app menu */
-	this.controller.setupWidget(Mojo.Menu.appMenu,this.attributes={omitDefaultItems:true},this.model={
+	this.menuAutoGCEnable = {label:"Yes",command:"auto"};
+	this.menuAutoGCDisable = {label:"No",command:"noauto"};
+	var f = this.enableAuto.bind(this);
+	f(this.prefs.autoGC);
+	this.controller.setupWidget(Mojo.Menu.appMenu,this.menuAttributes={omitDefaultItems:true},this.menuModel={
 		visible:true,
 		items:[
 			{label:"Sort by open service handles",command:"sh"}
 			,{label:"Sort by memory usage",command:"mem"}
 			,{label:"Garbage Collect JavaScript Heap",command:"gc"}
+			,{label:"Auto Garbage Collect?",items:[this.menuAutoGCEnable,this.menuAutoGCDisable]}
 		]
 	});
 	/* add event handlers to listen to events from widgets */
@@ -49,9 +63,11 @@ TopAssistant.prototype.setup = function() {
 	this.controller.listen("top_list", Mojo.Event.listDelete, this.killProcess.bind(this));
 	/* Default sort preference is by # of open service handles */
 	this.sortPref = "serviceHandles";
-	//this.interval = setInterval(this.updateList.bind(this),5000);
 	/* Holder of the last process list, keep it around so reordering list doesn't need to poll lunastats */
 	this.lastList = {};
+	/* Set up an auto GC interval if requested */
+	// Default to 5 minutes
+	this.timeout = (5*1000*60);
 }
 
 /* handler for app menu buttons */
@@ -73,9 +89,37 @@ TopAssistant.prototype.handleCommand = function(event) {
 				this.sortPref = "nodes";
 				f(this.lastList);
 				break;
+			case 'auto':
+				f = this.enableAuto.bind(this);
+				f(true);
+				break;
+			case 'noauto':
+				f = this.enableAuto.bind(this);
+				f(false);
+				break;
 			default: break;
 		}
 	}
+	/* If a swipe forward is seen, unfilter the list */
+	else if (event.type === Mojo.Event.forward) {
+		/* Unfilter */
+		this.filter = undefined;
+		f(this.lastList);
+	}
+}
+
+/* Enable auto gc? */
+TopAssistant.prototype.enableAuto = function(event) {
+	if (event === true){
+		this.menuAutoGCEnable.disabled = true;
+		this.menuAutoGCDisable.disabled = false;
+	}
+	else {
+		this.menuAutoGCEnable.disabled = false;
+		this.menuAutoGCDisable.disabled = true;
+	}
+	this.prefs.autoGC = event;
+	this.cookie.put(this.prefs);
 }
 
 /* Command to garbage collect the heap */
@@ -90,14 +134,21 @@ TopAssistant.prototype.garbageCollect = function() {
 
 /* Handle the tap on the list item */
 TopAssistant.prototype.handleTap = function(event) {
-	var f = this.fireBanner.bind(this);
-	f("Tracking " + event.item.processShort);
+	if (event.item.process != '<Anon>'){
+		this.filter = event.item.url;
+		var f = this.appendList.bind(this);
+		f(this.lastList);
+	}
 }
 
 /* Say we are GC'ing automagically */
 TopAssistant.prototype.autoGC = function() {
-	var f = this.fireBanner.bind(this);
-	f("Auto GC'ing");
+	if (this.prefs.autoGC){
+		var f = this.fireBanner.bind(this);
+		f("Auto GC'ing");
+		f = this.garbageCollect.bind(this);
+		f();
+	}
 }
 
 /* Fire a banner */
@@ -147,6 +198,7 @@ TopAssistant.prototype.activate = function(event) {
 	   example, key handlers that are observing the document */
 	
 	/* Update the list with real info */
+	this.interval = setInterval(this.autoGC.bind(this),this.timeout);
 	var f = this.updateList.bind(this);
 	f();
 }
@@ -155,7 +207,7 @@ TopAssistant.prototype.activate = function(event) {
 TopAssistant.prototype.deactivate = function(event) {
 	/* remove any event handlers you added in activate and do any other cleanup that should happen before
 	   this scene is popped or another scene is pushed on top */
-//	clearInterval(this.interval);
+	clearInterval(this.interval);
 }
 
 TopAssistant.prototype.cleanup = function(event) {
@@ -178,11 +230,9 @@ TopAssistant.prototype.updateList = function() {
 TopAssistant.prototype.appendList = function(event) {
 	/* save event */
 	this.lastList = event;
-	/* Used for debugging purposes */
-	//for (var i in event.documents[0]) {Mojo.Log.info(i);}
 	/* regex for splitting the process name */
 	var regPalm = new RegExp("^com.palm.[app\.]{0,4}(.*)?");
-	var regApp = new RegExp("^[^\.]+\.[^\.]+\.(.*)?");
+	var regApp = new RegExp("^(?:[^\.]+\.){2}(.*)?");
 	/* sort by preference */
 	var sorter = function (a,b) {
 		var x = a;
@@ -203,6 +253,14 @@ TopAssistant.prototype.appendList = function(event) {
 		}
 		return ((x < y) ? 1 : (x > y) ? -1 : 0);
 	}
+	/* Put anonymous apps on the bottom */
+	var anonbottom = function (a,b) {
+		var x = a.processShort;
+		var y = b.processShort;
+		if (x === '<Anon>') return 1;
+		if (y === '<Anon>') return -1;
+		return 0;
+	}
 	/* Array holding all the processes */
 	var processes = new Array();
 	//Mojo.Log.info("Add processes to list");
@@ -210,29 +268,44 @@ TopAssistant.prototype.appendList = function(event) {
 	var docLength = event.documents.length;
 	for (var i = 0; i < docLength; i++)
 	{
+		var app = event.documents[i];
 		/* Break the appId into a separate process name and pid */
-		var namePid = /([\w.]+)\s(\d+)/.exec(event.documents[i].appId);
+		Mojo.Log.info(app.appId);
+		var namePid = /([\w\.]+)\s(\d+)/.exec(app.appId);
 		/* Check that the current appId matched the regex */
-		if (namePid)
-		{
-			/* Construct a JSON object that has the process name, pid, and node count numbers */
-			var nameShort = namePid[1];
-			var isPalm = false;
-			var matchPalm = nameShort.match(regPalm);
-			if (matchPalm) { nameShort = matchPalm[1]; isPalm = true; }
-			var matchApp = nameShort.match(regApp);
-			if (matchApp[1]) { nameShort = matchApp[1]; isPalm = false; }
-			var str = {process:namePid[1],processShort:nameShort,processClass:(isPalm?'palm':''),pid:namePid[2],nodes:event.documents[i].nodes,serviceHandles:event.documents[i].openServiceHandles};
-			/* Append to processes array */
-			processes.push(str);
+		var name = (namePid != null ? namePid[1] : "<Anon>");
+		var pid = (namePid != null ? namePid[2] : "");
+		/* Construct a JSON object that has the process name, pid, and node count numbers */
+		var nameShort = name;
+		var isPalm = false;
+		var matchPalm = nameShort.match(regPalm);
+		if (matchPalm) { nameShort = matchPalm[1]; isPalm = true; }
+		var matchApp = nameShort.match(regApp);
+		if (matchApp[1]) { nameShort = matchApp[1]; isPalm = false; }
+		var str = {
+			process:name
+			,processShort:nameShort
+			,processClass:(isPalm?'palm':'')
+			,pid:pid
+			,nodes:app.nodes
+			,serviceHandles:app.openServiceHandles
+			,nokill:(name == "<Anon>" ? true : false)
+			,url:app.url
+		};
+		/* Append to processes array, filter if wanted */
+		if (this.filter){
+			if (app.url === this.filter){
+				processes.push(str);
+			}
 		}
-		else
-		{
-			Mojo.Log.info("Bad appId");
+		else{
+			processes.push(str);
 		}
 	}
 	/* Sort list */
 	processes = processes.sort(sorter.bind(this));
+	/* Put anons at the end */
+	processes = processes.sort(anonbottom.bind(this));
 	/* Add the list of processes to the GUI list */
 	this.controller.get("top_list").mojo.setLength(processes.length);
 	this.controller.get("top_list").mojo.noticeUpdatedItems(0,processes);
@@ -274,4 +347,11 @@ TopAssistant.prototype.formatSize = function(size)
 	
 	// return formatted size
 	return toReturn;
+}
+
+/* Unfilter the list */
+TopAssistant.prototype.unfilter = function(){
+	if (this.filter){
+		this.filter = undefined;
+	}
 }
