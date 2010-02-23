@@ -157,26 +157,6 @@ TopAssistant.prototype.fireBanner = function(app) {
 	this.controller.showBanner(bannerParams, {}, "");
 }
 
-/* Confirm that you REALLY want to kill this item */
-TopAssistant.prototype.confirmKill = function(event) {
-	var f = Mojo.doNothing();
-	var affirm = function(transport)
-	{
-		if (transport)
-		{
-			f(event);
-		}
-	}
-	this.controller.showAlertDialog({
-		onChoose:affirm,
-		title:"Track this apps usage?",
-		choices:[
-			{label:"Track it", value:true,type:'affirmative'},
-			{label:"Nevermind", value:false,type:'negative'}
-		]
-	});
-}
-
 /* Kills an app by pid# */
 TopAssistant.prototype.killProcess = function(event) {
 	/* Make sure the click event came from a list item */
@@ -263,14 +243,12 @@ TopAssistant.prototype.appendList = function(event) {
 	}
 	/* Array holding all the processes */
 	var processes = new Array();
-	//Mojo.Log.info("Add processes to list");
 	/* Loop over all the processes */
 	var docLength = event.documents.length;
 	for (var i = 0; i < docLength; i++)
 	{
 		var app = event.documents[i];
 		/* Break the appId into a separate process name and pid */
-		Mojo.Log.info(app.appId);
 		var namePid = /([\w\.]+)\s(\d+)/.exec(app.appId);
 		/* Check that the current appId matched the regex */
 		var name = (namePid != null ? namePid[1] : "<Anon>");
