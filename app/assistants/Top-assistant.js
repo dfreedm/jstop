@@ -23,12 +23,13 @@ TopAssistant.prototype.setup = function() {
 	/* Make the list uneditable by the user */
 	this.listAttributes = {
 		// Template for how to display list items
-		itemTemplate: 'Top/itemTemplate',
-		swipeToDelete: true,
-		autoConfirmDelete: true,
-		reorderable: false,
-		fixedHeightItems: true,
-		preventDeleteProperty: "nokill"
+		itemTemplate: 'Top/itemTemplate'
+		,swipeToDelete: true
+		,autoConfirmDelete: true
+		,reorderable: false
+		,fixedHeightItems: true
+		,preventDeleteProperty: "nokill"
+		,renderLimit: 50
 	};
 	Mojo.Log.info("Set up list model");
 
@@ -273,16 +274,15 @@ TopAssistant.prototype.appendList = function(event) {
 			if (str.nokill){
 				anonProcesses.push(str);
 			}else{
-			processes.push(str);
+				processes.push(str);
+			}
 		}
 	}
 	/* Sort list */
 	processes = processes.sort(sorter.bind(this));
 	anonProcesses = anonProcesses.sort(sorter.bind(this));
 	/* Put anons at the end */
-	for (var i in anonProcesses){
-		processes = processes.push(anonProcesses[i]);
-	}
+	processes = processes.concat(anonProcesses);
 	/* Add the list of processes to the GUI list */
 	this.controller.get("top_list").mojo.setLength(processes.length);
 	this.controller.get("top_list").mojo.noticeUpdatedItems(0,processes);
@@ -302,7 +302,8 @@ TopAssistant.prototype.appendList = function(event) {
 	//TODO: Useful metrics in new event.counters.jsHeap: see full_counter_api.txt
 	this.controller.get("heap_progress").update(this.formatSize(jsHeapSize));
 	this.controller.get("heap_progress").style.width = Math.round((jsHeapSize/jsHeapCapacity) * 100) + 'px';
-};
+}
+
 
 /* format bytes to easier to read value */
 TopAssistant.prototype.formatSize = function(size)

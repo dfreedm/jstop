@@ -85,6 +85,9 @@
 #top_list .palm-row-wrapper
 {
 	position: relative;
+}
+.padding
+{
 	padding-top: 9px;
 }
 #top_list .palm-row-wrapper .pid
@@ -108,11 +111,6 @@
 {
 	/* orangeish color for palm apps */
 	color: #a60;
-}
-#top_list .palm-row-wrapper .tracked
-{
-	/* Green color for tracked application */
-	color: green;
 }
 #top_list .palm-row-wrapper .nodes
 {

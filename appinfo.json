@@ -1,6 +1,6 @@
 {
 	"id": "com.palm.biz.sketchyplace.jstop",
-	"version": "0.0.10",
+	"version": "0.0.11",
 	"vendor": "SketchyPlace",
 	"type": "web",
 	"main": "index.html",
