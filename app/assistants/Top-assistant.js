@@ -233,16 +233,9 @@ TopAssistant.prototype.appendList = function(event) {
 		}
 		return ((x < y) ? 1 : (x > y) ? -1 : 0);
 	}
-	/* Put anonymous apps on the bottom */
-	var anonbottom = function (a,b) {
-		var x = a.processShort;
-		var y = b.processShort;
-		if (x === '<Anon>') return 1;
-		if (y === '<Anon>') return -1;
-		return 0;
-	}
 	/* Array holding all the processes */
 	var processes = new Array();
+	var anonProcesses = new Array();
 	/* Loop over all the processes */
 	var docLength = event.documents.length;
 	for (var i = 0; i < docLength; i++)
@@ -277,13 +270,19 @@ TopAssistant.prototype.appendList = function(event) {
 			}
 		}
 		else{
+			if (str.nokill){
+				anonProcesses.push(str);
+			}else{
 			processes.push(str);
 		}
 	}
 	/* Sort list */
 	processes = processes.sort(sorter.bind(this));
+	anonProcesses = anonProcesses.sort(sorter.bind(this));
 	/* Put anons at the end */
-	processes = processes.sort(anonbottom.bind(this));
+	for (var i in anonProcesses){
+		processes = processes.push(anonProcesses[i]);
+	}
 	/* Add the list of processes to the GUI list */
 	this.controller.get("top_list").mojo.setLength(processes.length);
 	this.controller.get("top_list").mojo.noticeUpdatedItems(0,processes);
