@@ -45,8 +45,13 @@ TopAssistant.prototype.setup = function() {
 	/* Create the app menu */
 	this.menuAutoGCEnable = {label:"Yes",command:"auto"};
 	this.menuAutoGCDisable = {label:"No",command:"noauto"};
-	var f = this.enableAuto.bind(this);
-	f(this.prefs.autoGC);
+	if (this.prefs.autoGC){
+		this.menuAutoGCEnable.disabled = true;
+		this.menuAutoGCDisable.disabled = false;
+	}else{
+		this.menuAutoGCEnable.disabled = false;
+		this.menuAutoGCDisable.disabled = true;
+	}
 	this.controller.setupWidget(Mojo.Menu.appMenu,this.menuAttributes={omitDefaultItems:true},this.menuModel={
 		visible:true,
 		items:[
@@ -66,9 +71,44 @@ TopAssistant.prototype.setup = function() {
 	this.sortPref = "serviceHandles";
 	/* Holder of the last process list, keep it around so reordering list doesn't need to poll lunastats */
 	this.lastList = {};
-	/* Set up an auto GC interval if requested */
-	// Default to 5 minutes
-	this.timeout = (5*1000*60);
+	this.timeout = (5*60*1000);
+}
+
+TopAssistant.prototype.handleLaunch = function(params){
+	Mojo.Log.info("handleLaunch was called");
+}
+
+/* Set the alarm for autoGC */
+TopAssistant.prototype.setupAutoGC = function(){
+	this.controller.serviceRequest('palm://com.palm.power/timeout',
+		{
+			method: "set",
+			parameters:{
+				key:"com.palm.app.sketchyplace.jstop.timeout",
+				wakeup:false,
+				uri:"palm://com.palm.applicationManager/launch",
+				params:{
+					id:"com.palm.app.sketchyplace.jstop",
+					params:{doGC:"autoGC"}
+				},
+				'in':"00:05:00"
+			},
+		onSuccess:function(){Mojo.Log.info("set up")},
+		onFailure:function(event){Mojo.Log.info(event.errorText)}
+	});
+}
+
+/* Remove the alarm */
+TopAssistant.prototype.removeAutoGC = function(){
+	this.controller.serviceRequest('palm://com.palm.power/timeout',
+		{
+			method:"clear",
+			parameters:{
+				key:"com.palm.app.sketchyplace.jstop.timeout"
+			},
+			onSuccess:function(){Mojo.Log.info("cleared")},
+			onFailure:function(event){Mojo.Log.info(event.errorText)}
+		});
 }
 
 /* handler for app menu buttons */
@@ -121,6 +161,14 @@ TopAssistant.prototype.enableAuto = function(event) {
 	}
 	this.prefs.autoGC = event;
 	this.cookie.put(this.prefs);
+	/*var f;
+	if (this.prefs.autoGC){
+		f = this.setupAutoGC.bind(this);
+		f();
+	}else{
+		f = this.removeAutoGC.bind(this);
+		f();
+	}*/
 }
 
 /* Command to garbage collect the heap */
@@ -135,7 +183,7 @@ TopAssistant.prototype.garbageCollect = function() {
 
 /* Handle the tap on the list item */
 TopAssistant.prototype.handleTap = function(event) {
-	if (event.item.process != '<Anon>'){
+	if (event.item.process != '<Zombie>'){
 		this.filter = event.item.url;
 		var f = this.appendList.bind(this);
 		f(this.lastList);
@@ -170,7 +218,7 @@ TopAssistant.prototype.killProcess = function(event) {
 		/* Redraw the list on success */
 		onSuccess: this.updateList.bind(this),
 		/* Do nothing on failure. This operation should NEVER FAIL */
-		onFailure: function(){Mojo.Log.error("OH GOD A CLOSE FAILED");}
+		onFailure: function(){Mojo.Log.info("OH GOD A CLOSE FAILED");}
 	});
 }
 
@@ -178,9 +226,14 @@ TopAssistant.prototype.activate = function(event) {
 	/* put in event handlers here that should only be in effect when this scene is active. For
 	   example, key handlers that are observing the document */
 	
-	/* Update the list with real info */
+	/* Set up an auto GC interval if requested */
 	this.interval = setInterval(this.autoGC.bind(this),this.timeout);
-	var f = this.updateList.bind(this);
+	/*if (this.prefs.autoGC){
+		var f = this.setupAutoGC.bind(this);
+		f();
+	}*/
+	/* Update the list with real info */
+	f = this.updateList.bind(this);
 	f();
 }
 
@@ -245,13 +298,12 @@ TopAssistant.prototype.appendList = function(event) {
 		/* Break the appId into a separate process name and pid */
 		var namePid = /([\w\.]+)\s(\d+)/.exec(app.appId);
 		/* Check that the current appId matched the regex */
-		var name = (namePid != null ? namePid[1] : "<Anon>");
+		var name = (namePid != null ? namePid[1] : "<Zombie>");
 		var pid = (namePid != null ? namePid[2] : "");
 		/* Construct a JSON object that has the process name, pid, and node count numbers */
 		var nameShort = name;
 		var isPalm = false;
-		var matchPalm = nameShort.match(regPalm);
-		if (matchPalm) { nameShort = matchPalm[1]; isPalm = true; }
+		var matchPalm = nameShort.match(regPalm); if (matchPalm) { nameShort = matchPalm[1]; isPalm = true; }
 		var matchApp = nameShort.match(regApp);
 		if (matchApp[1]) { nameShort = matchApp[1]; isPalm = false; }
 		var str = {
@@ -261,7 +313,7 @@ TopAssistant.prototype.appendList = function(event) {
 			,pid:pid
 			,nodes:app.nodes
 			,serviceHandles:app.openServiceHandles
-			,nokill:(name == "<Anon>" ? true : false)
+			,nokill:(name == "<Zombie>" ? true : false)
 			,url:app.url
 		};
 		/* Append to processes array, filter if wanted */
