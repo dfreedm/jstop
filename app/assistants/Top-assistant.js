@@ -265,7 +265,7 @@ TopAssistant.prototype.appendList = function(event) {
 	/* save event */
 	this.lastList = event;
 	/* regex for splitting the process name */
-	var regPalm = new RegExp("^com.palm.[app\.]{0,4}(.*)?");
+	var regPalm = new RegExp("^com.palm.(?:app\.)(.*)?");
 	var regApp = new RegExp("^(?:[^\.]+\.){2}(.*)?");
 	/* sort by preference */
 	var sorter = function (a,b) {
