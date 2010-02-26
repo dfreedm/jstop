@@ -288,8 +288,8 @@ TopAssistant.prototype.appendList = function(event) {
 		return ((x < y) ? 1 : (x > y) ? -1 : 0);
 	}
 	/* Array holding all the processes */
-	var processes = new Array();
-	var anonProcesses = new Array();
+	var processes = [];
+	var anonProcesses = [];
 	/* Loop over all the processes */
 	var docLength = event.documents.length;
 	for (var i = 0; i < docLength; i++)
@@ -316,25 +316,22 @@ TopAssistant.prototype.appendList = function(event) {
 			,nokill:(name == "<Zombie>" ? true : false)
 			,url:app.url
 		};
-		/* Append to processes array, filter if wanted */
-		if (this.filter){
-			if (app.url === this.filter){
-				processes.push(str);
-			}
-		}
-		else{
-			if (str.nokill){
-				anonProcesses.push(str);
-			}else{
-				processes.push(str);
-			}
-		}
 	}
+	/* Filter processes array, if filter is set */
+	var procFilter = function(app){
+		if (this.filter){
+			return app.url === this.filter;
+		}else{
+			return true;
+		}
+	};
 	/* Sort list */
 	processes = processes.sort(sorter.bind(this));
 	anonProcesses = anonProcesses.sort(sorter.bind(this));
 	/* Put anons at the end */
 	processes = processes.concat(anonProcesses);
+	/* Filter processes */
+	processes = processes.filter(procFilter.bind(this));
 	/* Add the list of processes to the GUI list */
 	this.controller.get("top_list").mojo.setLength(processes.length);
 	this.controller.get("top_list").mojo.noticeUpdatedItems(0,processes);
