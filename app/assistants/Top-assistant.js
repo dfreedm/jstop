@@ -28,7 +28,6 @@ TopAssistant.prototype.setup = function() {
 		,autoConfirmDelete: true
 		,reorderable: false
 		,fixedHeightItems: true
-		,preventDeleteProperty: "nokill"
 		,renderLimit: 50
 	};
 	Mojo.Log.info("Set up list model");
@@ -265,7 +264,7 @@ TopAssistant.prototype.appendList = function(event) {
 	/* save event */
 	this.lastList = event;
 	/* regex for splitting the process name */
-	var regPalm = new RegExp("^com.palm.(?:app\.)(.*)?");
+	var regPalm = new RegExp("^com.palm.(?:app\.)?(.*)?");
 	var regApp = new RegExp("^(?:[^\.]+\.){2}(.*)?");
 	/* sort by preference */
 	var sorter = function (a,b) {
@@ -298,8 +297,8 @@ TopAssistant.prototype.appendList = function(event) {
 		/* Break the appId into a separate process name and pid */
 		var namePid = /([\w\.]+)\s(\d+)/.exec(app.appId);
 		/* Check that the current appId matched the regex */
-		var name = (namePid != null ? namePid[1] : "<Zombie>");
-		var pid = (namePid != null ? namePid[2] : "");
+		var name = (namePid[1]);
+		var pid = (namePid[2]);
 		/* Construct a JSON object that has the process name, pid, and node count numbers */
 		var nameShort = name;
 		var isPalm = false;
@@ -313,9 +312,9 @@ TopAssistant.prototype.appendList = function(event) {
 			,pid:pid
 			,nodes:app.nodes
 			,serviceHandles:app.openServiceHandles
-			,nokill:(name == "<Zombie>" ? true : false)
 			,url:app.url
 		};
+		processes.push(str);
 	}
 	/* Filter processes array, if filter is set */
 	var procFilter = function(app){
@@ -327,9 +326,6 @@ TopAssistant.prototype.appendList = function(event) {
 	};
 	/* Sort list */
 	processes = processes.sort(sorter.bind(this));
-	anonProcesses = anonProcesses.sort(sorter.bind(this));
-	/* Put anons at the end */
-	processes = processes.concat(anonProcesses);
 	/* Filter processes */
 	processes = processes.filter(procFilter.bind(this));
 	/* Add the list of processes to the GUI list */
