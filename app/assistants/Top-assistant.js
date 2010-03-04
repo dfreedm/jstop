@@ -28,7 +28,7 @@ TopAssistant.prototype.setup = function() {
 		,autoConfirmDelete: true
 		,reorderable: false
 		,fixedHeightItems: true
-		,renderLimit: 50
+		,preventDeleteProperty: "nokill"
 	};
 	Mojo.Log.info("Set up list model");
 
@@ -293,28 +293,32 @@ TopAssistant.prototype.appendList = function(event) {
 	var docLength = event.documents.length;
 	for (var i = 0; i < docLength; i++)
 	{
-		var app = event.documents[i];
-		/* Break the appId into a separate process name and pid */
-		var namePid = /([\w\.]+)\s(\d+)/.exec(app.appId);
-		/* Check that the current appId matched the regex */
-		var name = (namePid[1]);
-		var pid = (namePid[2]);
-		/* Construct a JSON object that has the process name, pid, and node count numbers */
-		var nameShort = name;
-		var isPalm = false;
-		var matchPalm = nameShort.match(regPalm); if (matchPalm) { nameShort = matchPalm[1]; isPalm = true; }
-		var matchApp = nameShort.match(regApp);
-		if (matchApp[1]) { nameShort = matchApp[1]; isPalm = false; }
-		var str = {
-			process:name
-			,processShort:nameShort
-			,processClass:(isPalm?'palm':'')
-			,pid:pid
-			,nodes:app.nodes
-			,serviceHandles:app.openServiceHandles
-			,url:app.url
-		};
-		processes.push(str);
+		try{
+			var app = event.documents[i];
+			/* Break the appId into a separate process name and pid */
+			var namePid = /([\S]+)\s(\d+)/.exec(app.appId);
+			/* Check that the current appId matched the regex */
+			var name = (namePid === null ? "BROKEN" : namePid[1]);
+			var pid = (namePid === null ? "BORK" : namePid[2]);
+			/* Construct a JSON object that has the process name, pid, and node count numbers */
+			var nameShort = name;
+			var isPalm = false;
+			var matchPalm = nameShort.match(regPalm); if (matchPalm) { nameShort = matchPalm[1]; isPalm = true; }
+			var matchApp = nameShort.match(regApp);
+			if (matchApp[1]) { nameShort = matchApp[1]; isPalm = false; }
+			var str = {
+				process:name
+				,processShort:nameShort
+				,processClass:(isPalm?'palm':'')
+				,pid:pid
+				,nodes:app.nodes
+				,serviceHandles:app.openServiceHandles
+				,url:app.url
+			};
+			processes.push(str);
+		} catch (err){
+			processes.push({processShort:"BORKED",pid:"BRK",nodes:-1,serviceHandles:-1,nokill:true});
+		}
 	}
 	/* Filter processes array, if filter is set */
 	var procFilter = function(app){
@@ -331,7 +335,6 @@ TopAssistant.prototype.appendList = function(event) {
 	/* Add the list of processes to the GUI list */
 	this.controller.get("top_list").mojo.setLength(processes.length);
 	this.controller.get("top_list").mojo.noticeUpdatedItems(0,processes);
-
 	/* Update the Title with JavaScript Heap info */
 	/* 1.3.5 changed the JSON response, keeping backward compatibility with older devices */
 	if (event.counters.jsHeap == undefined)
