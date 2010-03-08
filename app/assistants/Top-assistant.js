@@ -10,7 +10,7 @@ TopAssistant.prototype.setup = function() {
 	this.cookie = new Mojo.Model.Cookie("jstop");
 	this.prefs = this.cookie.get();
 	if (this.prefs == null) {
-		var temp = {autoGC:false};
+		var temp = {autoGC:false,notif:true};
 		this.cookie.put(temp);
 		this.prefs = temp;
 	}
@@ -39,22 +39,24 @@ TopAssistant.prototype.setup = function() {
 	this.controller.setupWidget("top_list",this.topListAttributes,this.topListModel);
 
 	/* Create the app menu */
-	this.menuAutoGCEnable = {label:"Yes",command:"auto"};
-	this.menuAutoGCDisable = {label:"No",command:"noauto"};
+	this.menuAutoGC = {command:"autogc"};
 	if (this.prefs.autoGC){
-		this.menuAutoGCEnable.disabled = true;
-		this.menuAutoGCDisable.disabled = false;
+		this.menuAutoGC.label = "Disable Auto GC";
 	}else{
-		this.menuAutoGCEnable.disabled = false;
-		this.menuAutoGCDisable.disabled = true;
+		this.menuAutoGC.label = "Enable Auto GC";
 	}
+	this.defilterItem = {label:"Unfilter List",command:"unfilter"};
+	this.defilterItem.disabled = true;
+	this.notifications = {label:"Disable Notifications",command:"notif"};
 	this.controller.setupWidget(Mojo.Menu.appMenu,this.menuAttributes={omitDefaultItems:true},this.menuModel={
 		visible:true,
 		items:[
 			{label:"Sort by open service handles",command:"sh"}
 			,{label:"Sort by memory usage",command:"mem"}
 			,{label:"Garbage Collect JavaScript Heap",command:"gc"}
-			,{label:"Auto Garbage Collect?",items:[this.menuAutoGCEnable,this.menuAutoGCDisable]}
+			,this.defilterItem
+			,this.notifications
+			,this.menuAutoGC
 		]
 	});
 	/* add event handlers to listen to events from widgets */
@@ -67,10 +69,6 @@ TopAssistant.prototype.setup = function() {
 	this.sortPref = "serviceHandles";
 	/* Holder of the last process list, keep it around so reordering list doesn't need to poll lunastats */
 	this.lastList = {};
-}
-
-TopAssistant.prototype.handleLaunch = function(params){
-	Mojo.Log.info("handleLaunch was called");
 }
 
 /* Set the alarm for autoGC */
@@ -125,44 +123,49 @@ TopAssistant.prototype.handleCommand = function(event) {
 				this.sortPref = "nodes";
 				f(this.lastList);
 				break;
-			case 'auto':
+			case 'autogc':
 				f = this.enableAuto.bind(this);
-				f(true);
+				f();
 				break;
-			case 'noauto':
-				f = this.enableAuto.bind(this);
-				f(false);
+			case 'unfilter':
+				var q = this.unfilter.bind(this);
+				q();
+				f(this.lastList);
+				break;
+			case 'notif':
+				f = this.toggleNotifications.bind(this);
+				f();
 				break;
 			default: break;
 		}
 	}
-	/* If a swipe forward is seen, unfilter the list */
-	else if (event.type === Mojo.Event.forward) {
-		/* Unfilter */
-		this.filter = undefined;
-		f(this.lastList);
+}
+
+/* Show notifications? */
+TopAssistant.prototype.toggleNotifications = function(){
+	if(this.prefs.notif){
+		this.notifications.label = "Enable Notifications";
+		this.prefs.notif = false;
+	}else{
+		this.notifications.label = "Disable Notifications";
+		this.prefs.notif = true;
 	}
+	this.cookie.put(this.prefs);
 }
 
 /* Enable auto gc? */
 TopAssistant.prototype.enableAuto = function(event) {
-	if (event === true){
-		this.menuAutoGCEnable.disabled = true;
-		this.menuAutoGCDisable.disabled = false;
-	}
-	else {
-		this.menuAutoGCEnable.disabled = false;
-		this.menuAutoGCDisable.disabled = true;
-	}
-	this.prefs.autoGC = event;
+	this.prefs.autoGC = !this.prefs.autoGC;
 	this.cookie.put(this.prefs);
 	var f;
 	if (this.prefs.autoGC){
 		f = this.setupAutoGC.bind(this);
 		f();
+		this.menuAutoGC.label = "Disable Auto GC";
 	}else{
 		f = this.removeAutoGC.bind(this);
 		f();
+		this.menuAutoGC.label = "Enable Auto GC";
 	}
 }
 
@@ -181,11 +184,16 @@ TopAssistant.prototype.handleTap = function(event) {
 	var f = this.appendList.bind(this);
 	if (!this.filter){
 		this.filter = event.item.url;
+		this.defilterItem.disabled = false;
 		f(this.lastList);
 	}
 	else {
-		this.filter = undefined;
-		f(this.lastList);
+		this.controller.showAlertDialog({
+			onChoose:Mojo.doNothing,
+			title:"More info",
+			message: ("appId: " + event.item.appId + "\n" + "URL: " + event.item.url),
+			choices: [{label:"Close",value:"who cares",type:'dismiss'}]
+		});
 	}
 }
 
@@ -291,8 +299,8 @@ TopAssistant.prototype.appendList = function(event) {
 	var docLength = event.documents.length;
 	for (var i = 0; i < docLength; i++)
 	{
+		var app = event.documents[i];
 		try{
-			var app = event.documents[i];
 			/* Break the appId into a separate process name and pid */
 			var namePid = /(.+)\s(\d+)/.exec(app.appId);
 			/* Check that the current appId matched the regex */
@@ -312,10 +320,11 @@ TopAssistant.prototype.appendList = function(event) {
 				,nodes:app.nodes
 				,serviceHandles:app.openServiceHandles
 				,url:app.url
+				,appId:app.appId
 			};
 			processes.push(str);
 		} catch (err) {
-			processes.push({processShort:"BORKED",pid:"BRK",nodes:-1,serviceHandles:-1,nokill:true});
+			processes.push({processShort:"BORKED",pid:"BRK",nodes:-1,serviceHandles:-1,nokill:true,appId:app.appId,url:app.url});
 		}
 	}
 	/* Filter processes array, if filter is set */
@@ -377,5 +386,6 @@ TopAssistant.prototype.formatSize = function(size)
 TopAssistant.prototype.unfilter = function(){
 	if (this.filter){
 		this.filter = undefined;
+		this.defilterItem.disabled = true;
 	}
 }

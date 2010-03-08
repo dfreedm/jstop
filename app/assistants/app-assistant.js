@@ -5,6 +5,13 @@ AppAssistant.prototype.setup = function(){
 }
 
 AppAssistant.prototype.handleLaunch = function(launchParams) {
+    this.cookie = new Mojo.Model.Cookie("jstop");
+    this.prefs = this.cookie.get();
+    if (this.prefs == null) {
+        var temp = {autoGC:false,notif:true};
+        this.cookie.put(temp);
+        this.prefs = temp;
+    }
     var cardStageController = this.controller.getStageController("JSTop");
     var appController = Mojo.Controller.getAppController();
     Mojo.Log.error("App Params: " + launchParams);
@@ -65,6 +72,8 @@ AppAssistant.prototype.doGC = function(){
 }
 AppAssistant.prototype.fireBanner = function() {
     Mojo.Log.info("Fire banner");
-    var bannerParams = {messageText: "Auto GC'ed"};
-    this.controller.showBanner(bannerParams, {}, "");
+    if (this.prefs.notif){
+        var bannerParams = {messageText: "Auto GC'ed"};
+        this.controller.showBanner(bannerParams, {}, "");
+    }
 }
