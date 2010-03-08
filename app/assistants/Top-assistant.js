@@ -18,10 +18,8 @@ TopAssistant.prototype.setup = function() {
 	/* use Mojo.View.render to render view templates and add them to the scene, if needed. */
 
 	/* setup widgets here */
-	Mojo.Log.info("Set up attributes");
-
 	/* Make the list uneditable by the user */
-	this.listAttributes = {
+	this.topListAttributes = {
 		// Template for how to display list items
 		itemTemplate: 'Top/itemTemplate'
 		,swipeToDelete: true
@@ -30,16 +28,15 @@ TopAssistant.prototype.setup = function() {
 		,fixedHeightItems: true
 		,preventDeleteProperty: "nokill"
 	};
-	Mojo.Log.info("Set up list model");
 
-	/* Set a fake item, Give a title to the list */
-	this.listModel = {
+	/* Set a fake item, Give a title to the list */ 
+	this.topListModel = {
 		listTitle: 'Running Processes',
 		items: [{process:"broken.this has broken",pid:"9999",nodes:"-1",serviceHandles:0,nokill:true}]
 	};
 
 	/* Create the list widget */
-	this.controller.setupWidget("top_list",this.listAttributes,this.listModel);
+	this.controller.setupWidget("top_list",this.topListAttributes,this.topListModel);
 
 	/* Create the app menu */
 	this.menuAutoGCEnable = {label:"Yes",command:"auto"};
@@ -70,7 +67,6 @@ TopAssistant.prototype.setup = function() {
 	this.sortPref = "serviceHandles";
 	/* Holder of the last process list, keep it around so reordering list doesn't need to poll lunastats */
 	this.lastList = {};
-	this.timeout = (5*60*1000);
 }
 
 TopAssistant.prototype.handleLaunch = function(params){
@@ -83,18 +79,18 @@ TopAssistant.prototype.setupAutoGC = function(){
 		{
 			method: "set",
 			parameters:{
-				key:"com.palm.app.sketchyplace.jstop.timeout",
+				key:"com.palm.biz.sketchyplace.jstop.timeout",
 				wakeup:false,
 				uri:"palm://com.palm.applicationManager/launch",
 				params:{
-					id:"com.palm.app.sketchyplace.jstop",
-					params:{doGC:"autoGC"}
+					id:"com.palm.biz.sketchyplace.jstop",
+					params:{action:"doGC"}
 				},
 				'in':"00:05:00"
 			},
 		onSuccess:function(){Mojo.Log.info("set up")},
 		onFailure:function(event){Mojo.Log.info(event.errorText)}
-	});
+		});
 }
 
 /* Remove the alarm */
@@ -103,7 +99,7 @@ TopAssistant.prototype.removeAutoGC = function(){
 		{
 			method:"clear",
 			parameters:{
-				key:"com.palm.app.sketchyplace.jstop.timeout"
+				key:"com.palm.biz.sketchyplace.jstop.timeout"
 			},
 			onSuccess:function(){Mojo.Log.info("cleared")},
 			onFailure:function(event){Mojo.Log.info(event.errorText)}
@@ -160,14 +156,14 @@ TopAssistant.prototype.enableAuto = function(event) {
 	}
 	this.prefs.autoGC = event;
 	this.cookie.put(this.prefs);
-	/*var f;
+	var f;
 	if (this.prefs.autoGC){
 		f = this.setupAutoGC.bind(this);
 		f();
 	}else{
 		f = this.removeAutoGC.bind(this);
 		f();
-	}*/
+	}
 }
 
 /* Command to garbage collect the heap */
@@ -182,9 +178,13 @@ TopAssistant.prototype.garbageCollect = function() {
 
 /* Handle the tap on the list item */
 TopAssistant.prototype.handleTap = function(event) {
-	if (event.item.process != '<Zombie>'){
+	var f = this.appendList.bind(this);
+	if (!this.filter){
 		this.filter = event.item.url;
-		var f = this.appendList.bind(this);
+		f(this.lastList);
+	}
+	else {
+		this.filter = undefined;
 		f(this.lastList);
 	}
 }
@@ -226,11 +226,10 @@ TopAssistant.prototype.activate = function(event) {
 	   example, key handlers that are observing the document */
 	
 	/* Set up an auto GC interval if requested */
-	this.interval = setInterval(this.autoGC.bind(this),this.timeout);
-	/*if (this.prefs.autoGC){
+	if (this.prefs.autoGC){
 		var f = this.setupAutoGC.bind(this);
 		f();
-	}*/
+	}
 	/* Update the list with real info */
 	f = this.updateList.bind(this);
 	f();
@@ -240,7 +239,6 @@ TopAssistant.prototype.activate = function(event) {
 TopAssistant.prototype.deactivate = function(event) {
 	/* remove any event handlers you added in activate and do any other cleanup that should happen before
 	   this scene is popped or another scene is pushed on top */
-	clearInterval(this.interval);
 }
 
 TopAssistant.prototype.cleanup = function(event) {
@@ -296,7 +294,7 @@ TopAssistant.prototype.appendList = function(event) {
 		try{
 			var app = event.documents[i];
 			/* Break the appId into a separate process name and pid */
-			var namePid = /([\S]+)\s(\d+)/.exec(app.appId);
+			var namePid = /(.+)\s(\d+)/.exec(app.appId);
 			/* Check that the current appId matched the regex */
 			var name = (namePid === null ? "BROKEN" : namePid[1]);
 			var pid = (namePid === null ? "BORK" : namePid[2]);
@@ -316,7 +314,7 @@ TopAssistant.prototype.appendList = function(event) {
 				,url:app.url
 			};
 			processes.push(str);
-		} catch (err){
+		} catch (err) {
 			processes.push({processShort:"BORKED",pid:"BRK",nodes:-1,serviceHandles:-1,nokill:true});
 		}
 	}
