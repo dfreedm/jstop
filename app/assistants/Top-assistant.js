@@ -252,6 +252,10 @@ TopAssistant.prototype.deactivate = function(event) {
 TopAssistant.prototype.cleanup = function(event) {
 	/* this function should do any cleanup needed before the scene is destroyed as 
 	   a result of being popped off the scene stack */
+	/* Close everything if no autoGC */
+	if (!this.prefs.autoGC){
+		Mojo.Controller.AppController.closeAllStages();
+	}
 }
 
 /* Calls the service which knows about application statistics */
