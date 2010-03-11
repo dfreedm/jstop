@@ -183,7 +183,7 @@ TopAssistant.prototype.garbageCollect = function() {
 TopAssistant.prototype.handleTap = function(event) {
 	var f = this.appendList.bind(this);
 	if (!this.filter){
-		this.filter = event.item.url;
+		this.filter = event.item.processShort;
 		this.defilterItem.disabled = false;
 		f(this.lastList);
 	}
@@ -334,7 +334,7 @@ TopAssistant.prototype.appendList = function(event) {
 	/* Filter processes array, if filter is set */
 	var procFilter = function(app){
 		if (this.filter){
-			return app.url === this.filter;
+			return app.processShort === this.filter;
 		}else{
 			return true;
 		}
