@@ -39,15 +39,16 @@ TopAssistant.prototype.setup = function() {
 	this.controller.setupWidget("top_list",this.topListAttributes,this.topListModel);
 
 	/* Create the app menu */
-	this.menuAutoGC = {command:"autogc"};
+	this.menuAutoGC = {label:"Enable Auto GC",command:"autogc"};
 	if (this.prefs.autoGC){
 		this.menuAutoGC.label = "Disable Auto GC";
-	}else{
-		this.menuAutoGC.label = "Enable Auto GC";
 	}
 	this.defilterItem = {label:"Unfilter List",command:"unfilter"};
 	this.defilterItem.disabled = true;
-	this.notifications = {label:"Disable Notifications",command:"notif"};
+	this.notifications = {label:"Enable Notifications",command:"notif"};
+	if (this.prefs.notif){
+		this.notifications.label = "Disable Notifications";
+	}
 	this.controller.setupWidget(Mojo.Menu.appMenu,this.menuAttributes={omitDefaultItems:true},this.menuModel={
 		visible:true,
 		items:[
