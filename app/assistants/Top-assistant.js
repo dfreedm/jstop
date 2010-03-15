@@ -327,8 +327,12 @@ TopAssistant.prototype.appendList = function(event) {
 				,url:app.url
 				,appId:app.appId
 			};
-			processes.push(str);
+			/* about:blank is not really a "borked" */
+			if (app.url != "about:blank"){
+				processes.push(str);
+			}
 		} catch (err) {
+			/* WTF? */
 			processes.push({processShort:"BORKED",pid:"BRK",nodes:-1,serviceHandles:-1,nokill:true,appId:app.appId,url:app.url});
 		}
 	}
