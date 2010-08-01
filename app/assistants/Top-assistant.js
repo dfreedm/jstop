@@ -1,8 +1,10 @@
 function TopAssistant() {
-	/* this is the creator function for your scene assistant object. It will be passed all the 
-	   additional parameters (after the scene name) that were passed to pushScene. The reference
-	   to the scene controller (this.controller) has not be established yet, so any initialization
-	   that needs the scene controller should be done in the setup function below. */
+	/* Bind all the functions at instantiation */
+	var bindThese = ["setupAutoGC","removeAutoGC","toggleNotifications","enableAuto","garbageCollect","autoGC","fireBanner","killProcess","updateList","appendList","formatSize","unfilter"];
+	var binder = function(f) {
+		this[f] = this[f].bind(this);
+	}.bind(this);
+	bindThese.forEach(binder);
 }
 
 TopAssistant.prototype.setup = function() {
@@ -43,8 +45,6 @@ TopAssistant.prototype.setup = function() {
 	if (this.prefs.autoGC){
 		this.menuAutoGC.label = "Disable Auto GC";
 	}
-	this.defilterItem = {label:"Unfilter List",command:"unfilter"};
-	this.defilterItem.disabled = true;
 	this.notifications = {label:"Enable Notifications",command:"notif"};
 	if (this.prefs.notif){
 		this.notifications.label = "Disable Notifications";
@@ -55,7 +55,6 @@ TopAssistant.prototype.setup = function() {
 			{label:"Sort by open service handles",command:"sh"}
 			,{label:"Sort by memory usage",command:"mem"}
 			,{label:"Garbage Collect JavaScript Heap",command:"gc"}
-			,this.defilterItem
 			,this.notifications
 			,this.menuAutoGC
 		]
@@ -107,38 +106,38 @@ TopAssistant.prototype.removeAutoGC = function(){
 
 /* handler for app menu buttons */
 TopAssistant.prototype.handleCommand = function(event) {
-	var f = this.appendList.bind(this);
 	if (event.type === Mojo.Event.command)
 	{
 		switch(event.command)
 		{
 			case 'gc':
-				f = this.garbageCollect.bind(this);
-				f();
+				this.garbageCollect();
 				break;
 			case 'sh':
 				this.sortPref = "serviceHandles";
-				f(this.lastList);
+				this.appendList(this.lastList);
 				break;
 			case 'mem':
 				this.sortPref = "nodes";
-				f(this.lastList);
+				this.appendList(this.lastList);
 				break;
 			case 'autogc':
-				f = this.enableAuto.bind(this);
-				f();
+				this.enableAuto();
 				break;
 			case 'unfilter':
-				var q = this.unfilter.bind(this);
-				q();
-				f(this.lastList);
+				this.unfilter();
+				this.appendList(this.lastList);
 				break;
 			case 'notif':
-				f = this.toggleNotifications.bind(this);
-				f();
+				this.toggleNotifications();
 				break;
 			default: break;
 		}
+	}
+	if (event.type === Mojo.Event.back) {
+		event.stop();
+		this.unfilter();
+		this.appendList(this.lastList);
 	}
 }
 
@@ -158,14 +157,11 @@ TopAssistant.prototype.toggleNotifications = function(){
 TopAssistant.prototype.enableAuto = function(event) {
 	this.prefs.autoGC = !this.prefs.autoGC;
 	this.cookie.put(this.prefs);
-	var f;
 	if (this.prefs.autoGC){
-		f = this.setupAutoGC.bind(this);
-		f();
+		this.setupAutoGC();
 		this.menuAutoGC.label = "Disable Auto GC";
 	}else{
-		f = this.removeAutoGC.bind(this);
-		f();
+		this.removeAutoGC();
 		this.menuAutoGC.label = "Enable Auto GC";
 	}
 }
@@ -173,20 +169,26 @@ TopAssistant.prototype.enableAuto = function(event) {
 /* Command to garbage collect the heap */
 TopAssistant.prototype.garbageCollect = function() {
 	Mojo.Log.info("GC'ing javascript heap");
+	// Do it twice to clear out dangling references (v8 oddity)
+	var secondRound = function(){
+		this.controller.serviceRequest('palm://com.palm.lunastats',{
+			method: 'gc',
+			parameters: {},
+			onComplete: this.appendList});
+	};
+	secondRound = secondRound.bind(this);
 	this.controller.serviceRequest('palm://com.palm.lunastats',{
 		method: 'gc',
 		parameters: {},
-		onComplete: this.appendList.bind(this)
+		onComplete: secondRound
 	});
 }
 
 /* Handle the tap on the list item */
 TopAssistant.prototype.handleTap = function(event) {
-	var f = this.appendList.bind(this);
 	if (!this.filter){
 		this.filter = event.item.processShort;
-		this.defilterItem.disabled = false;
-		f(this.lastList);
+		this.appendList(this.lastList);
 	}
 	else {
 		this.controller.showAlertDialog({
@@ -201,10 +203,8 @@ TopAssistant.prototype.handleTap = function(event) {
 /* Say we are GC'ing automagically */
 TopAssistant.prototype.autoGC = function() {
 	if (this.prefs.autoGC){
-		var f = this.fireBanner.bind(this);
-		f("Auto GC'ing");
-		f = this.garbageCollect.bind(this);
-		f();
+		this.fireBanner("Auto GC'ing");
+		this.garbageCollect();
 	}
 }
 
@@ -224,7 +224,7 @@ TopAssistant.prototype.killProcess = function(event) {
 		/* The pid is used as the processId */
 		parameters: {processId:event.item.pid},
 		/* Redraw the list on success */
-		onSuccess: this.updateList.bind(this),
+		onSuccess: this.updateList,
 		/* Do nothing on failure. This operation should NEVER FAIL */
 		onFailure: function(){Mojo.Log.info("OH GOD A CLOSE FAILED");}
 	});
@@ -236,12 +236,10 @@ TopAssistant.prototype.activate = function(event) {
 	
 	/* Set up an auto GC interval if requested */
 	if (this.prefs.autoGC){
-		var f = this.setupAutoGC.bind(this);
-		f();
+		this.setupAutoGC();
 	}
 	/* Update the list with real info */
-	f = this.updateList.bind(this);
-	f();
+	this.updateList();
 }
 
 
@@ -255,7 +253,7 @@ TopAssistant.prototype.cleanup = function(event) {
 	   a result of being popped off the scene stack */
 	/* Close everything if no autoGC */
 	if (!this.prefs.autoGC){
-		Mojo.Controller.AppController.closeAllStages();
+		Mojo.Controller.getAppController().closeAllStages();
 	}
 }
 
@@ -266,7 +264,7 @@ TopAssistant.prototype.updateList = function() {
 		method: 'getStats',
 		parameters: {subscribe:true},
 		//For some reason, onSuccess never happens :(
-		onComplete: this.appendList.bind(this),
+		onComplete: this.appendList
 	});
 }
 
@@ -332,8 +330,7 @@ TopAssistant.prototype.appendList = function(event) {
 				processes.push(str);
 			}
 		} catch (err) {
-			/* WTF? */
-			processes.push({processShort:"BORKED",pid:"BRK",nodes:-1,serviceHandles:-1,nokill:true,appId:app.appId,url:app.url});
+			/* stageless scenes disappear eventually */
 		}
 	}
 	/* Filter processes array, if filter is set */
@@ -353,7 +350,7 @@ TopAssistant.prototype.appendList = function(event) {
 	this.controller.get("top_list").mojo.noticeUpdatedItems(0,processes);
 	/* Update the Title with JavaScript Heap info */
 	/* 1.3.5 changed the JSON response, keeping backward compatibility with older devices */
-	if (event.counters.jsHeap == undefined)
+	if (typeof event.counters.jsHeap === "undefined")
 	{
 		var jsHeapSize = event.counters.jsHeapSize;
 		var jsHeapCapacity = event.counters.jsHeapCapacity;
@@ -393,8 +390,7 @@ TopAssistant.prototype.formatSize = function(size)
 
 /* Unfilter the list */
 TopAssistant.prototype.unfilter = function(){
-	if (this.filter){
+	if (this.filter) {
 		this.filter = undefined;
-		this.defilterItem.disabled = true;
 	}
 }
