@@ -124,10 +124,6 @@ TopAssistant.prototype.handleCommand = function(event) {
 			case 'autogc':
 				this.enableAuto();
 				break;
-			case 'unfilter':
-				this.unfilter();
-				this.appendList(this.lastList);
-				break;
 			case 'notif':
 				this.toggleNotifications();
 				break;
