@@ -269,8 +269,9 @@ TopAssistant.prototype.appendList = function(event) {
 	/* save event */
 	this.lastList = event;
 	/* regex for splitting the process name */
-	var regPalm = new RegExp("^com.palm.(?:app\.)?(.*)?");
-	var regApp = new RegExp("^(?:[^\.]+\.){2}(.*)?");
+	var regPalm = new RegExp("^com\\.palm\\.(?:app\\.)?(.*)?");
+	var regApp = new RegExp("^(?:[^\\.]+\\.){2}(.*)?");
+	var regNamePid = new RegExp("(.+)s\\s(\\d+)");
 	/* sort by preference */
 	var sorter = function (a,b) {
 		var x = a;
@@ -299,18 +300,18 @@ TopAssistant.prototype.appendList = function(event) {
 	for (var i = 0; i < docLength; i++)
 	{
 		var app = event.documents[i];
-		try{
-			/* Break the appId into a separate process name and pid */
-			var namePid = /(.+)\s(\d+)/.exec(app.appId);
-			/* Check that the current appId matched the regex */
-			var name = (namePid === null ? "BROKEN" : namePid[1]);
-			var pid = (namePid === null ? "BORK" : namePid[2]);
+		/* Break the appId into a separate process name and pid */
+		var namePid = app.appId.match(regNamePid);
+		/* Check that the current appId matched the regex */
+		if (namePid) {
+			var name = namePid[1];
+			var pid = namePid[2];
 			/* Construct a JSON object that has the process name, pid, and node count numbers */
 			var nameShort = name;
 			var isPalm = false;
 			var matchPalm = nameShort.match(regPalm); if (matchPalm) { nameShort = matchPalm[1]; isPalm = true; }
 			var matchApp = nameShort.match(regApp);
-			if (matchApp[1]) { nameShort = matchApp[1]; isPalm = false; }
+			if (typeof matchApp[1] !== "undefined" && typeof matchApp[1] !== "null") { nameShort = matchApp[1]; isPalm = false; }
 			var str = {
 				process:name
 				,processShort:nameShort
@@ -321,14 +322,11 @@ TopAssistant.prototype.appendList = function(event) {
 				,url:app.url
 				,appId:app.appId
 			};
-			/* about:blank is not really a "borked" */
+			/* about:blank is not useful */
 			if (app.url != "about:blank"){
 				processes.push(str);
 			}
-		} catch (err) {
-			/* stageless scenes disappear eventually */
 		}
-	}
 	/* Filter processes array, if filter is set */
 	var procFilter = function(app){
 		if (this.filter){
