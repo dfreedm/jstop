@@ -11,7 +11,7 @@ TopAssistant.prototype.setup = function() {
 	/* this function is for setup tasks that have to happen when the scene is first created */
 	this.cookie = new Mojo.Model.Cookie("jstop");
 	this.prefs = this.cookie.get();
-	if (this.prefs == null) {
+	if (this.prefs === null) {
 		var temp = {autoGC:false,notif:true};
 		this.cookie.put(temp);
 		this.prefs = temp;
@@ -23,12 +23,12 @@ TopAssistant.prototype.setup = function() {
 	/* Make the list uneditable by the user */
 	this.topListAttributes = {
 		// Template for how to display list items
-		itemTemplate: 'Top/itemTemplate'
-		,swipeToDelete: true
-		,autoConfirmDelete: true
-		,reorderable: false
-		,fixedHeightItems: true
-		,preventDeleteProperty: "nokill"
+		itemTemplate: 'Top/itemTemplate',
+		swipeToDelete: true,
+		autoConfirmDelete: true,
+		reorderable: false,
+		fixedHeightItems: true,
+		preventDeleteProperty: "nokill"
 	};
 
 	/* Set a fake item, Give a title to the list */ 
@@ -52,11 +52,11 @@ TopAssistant.prototype.setup = function() {
 	this.controller.setupWidget(Mojo.Menu.appMenu,this.menuAttributes={omitDefaultItems:true},this.menuModel={
 		visible:true,
 		items:[
-			{label:"Sort by open service handles",command:"sh"}
-			,{label:"Sort by memory usage",command:"mem"}
-			,{label:"Garbage Collect JavaScript Heap",command:"gc"}
-			,this.notifications
-			,this.menuAutoGC
+			{label:"Sort by open service handles",command:"sh"},
+			{label:"Sort by memory usage",command:"mem"},
+			{label:"Garbage Collect JavaScript Heap",command:"gc"},
+			this.notifications,
+			this.menuAutoGC
 		]
 	});
 	/* add event handlers to listen to events from widgets */
@@ -69,7 +69,7 @@ TopAssistant.prototype.setup = function() {
 	this.sortPref = "serviceHandles";
 	/* Holder of the last process list, keep it around so reordering list doesn't need to poll lunastats */
 	this.lastList = {};
-}
+};
 
 /* Set the alarm for autoGC */
 TopAssistant.prototype.setupAutoGC = function(){
@@ -86,10 +86,10 @@ TopAssistant.prototype.setupAutoGC = function(){
 				},
 				'in':"00:05:00"
 			},
-		onSuccess:function(){Mojo.Log.info("set up")},
-		onFailure:function(event){Mojo.Log.info(event.errorText)}
+		onSuccess:function(){Mojo.Log.info("set up");},
+		onFailure:function(event){Mojo.Log.info(event.errorText);}
 		});
-}
+};
 
 /* Remove the alarm */
 TopAssistant.prototype.removeAutoGC = function(){
@@ -99,10 +99,10 @@ TopAssistant.prototype.removeAutoGC = function(){
 			parameters:{
 				key:"com.palm.biz.sketchyplace.jstop.timeout"
 			},
-			onSuccess:function(){Mojo.Log.info("cleared")},
-			onFailure:function(event){Mojo.Log.info(event.errorText)}
+			onSuccess:function(){Mojo.Log.info("cleared");},
+			onFailure:function(event){Mojo.Log.info(event.errorText);}
 		});
-}
+};
 
 /* handler for app menu buttons */
 TopAssistant.prototype.handleCommand = function(event) {
@@ -135,7 +135,7 @@ TopAssistant.prototype.handleCommand = function(event) {
 		this.unfilter();
 		this.appendList(this.lastList);
 	}
-}
+};
 
 /* Show notifications? */
 TopAssistant.prototype.toggleNotifications = function(){
@@ -147,7 +147,7 @@ TopAssistant.prototype.toggleNotifications = function(){
 		this.prefs.notif = true;
 	}
 	this.cookie.put(this.prefs);
-}
+};
 
 /* Enable auto gc? */
 TopAssistant.prototype.enableAuto = function(event) {
@@ -160,7 +160,7 @@ TopAssistant.prototype.enableAuto = function(event) {
 		this.removeAutoGC();
 		this.menuAutoGC.label = "Enable Auto GC";
 	}
-}
+};
 
 /* Command to garbage collect the heap */
 TopAssistant.prototype.garbageCollect = function() {
@@ -178,7 +178,7 @@ TopAssistant.prototype.garbageCollect = function() {
 		parameters: {},
 		onComplete: secondRound
 	});
-}
+};
 
 /* Handle the tap on the list item */
 TopAssistant.prototype.handleTap = function(event) {
@@ -194,7 +194,7 @@ TopAssistant.prototype.handleTap = function(event) {
 			choices: [{label:"Close",value:"who cares",type:'dismiss'}]
 		});
 	}
-}
+};
 
 /* Say we are GC'ing automagically */
 TopAssistant.prototype.autoGC = function() {
@@ -202,13 +202,13 @@ TopAssistant.prototype.autoGC = function() {
 		this.fireBanner("Auto GC'ing");
 		this.garbageCollect();
 	}
-}
+};
 
 /* Fire a banner */
 TopAssistant.prototype.fireBanner = function(app) {
 	var bannerParams = {messageText: app};
 	this.controller.showBanner(bannerParams, {}, "");
-}
+};
 
 /* Kills an app by pid# */
 TopAssistant.prototype.killProcess = function(event) {
@@ -224,7 +224,7 @@ TopAssistant.prototype.killProcess = function(event) {
 		/* Do nothing on failure. This operation should NEVER FAIL */
 		onFailure: function(){Mojo.Log.info("OH GOD A CLOSE FAILED");}
 	});
-}
+};
 
 TopAssistant.prototype.activate = function(event) {
 	/* put in event handlers here that should only be in effect when this scene is active. For
@@ -236,13 +236,13 @@ TopAssistant.prototype.activate = function(event) {
 	}
 	/* Update the list with real info */
 	this.updateList();
-}
+};
 
 
 TopAssistant.prototype.deactivate = function(event) {
 	/* remove any event handlers you added in activate and do any other cleanup that should happen before
 	   this scene is popped or another scene is pushed on top */
-}
+};
 
 TopAssistant.prototype.cleanup = function(event) {
 	/* this function should do any cleanup needed before the scene is destroyed as 
@@ -251,7 +251,7 @@ TopAssistant.prototype.cleanup = function(event) {
 	if (!this.prefs.autoGC){
 		Mojo.Controller.getAppController().closeAllStages();
 	}
-}
+};
 
 /* Calls the service which knows about application statistics */
 TopAssistant.prototype.updateList = function() {
@@ -262,7 +262,7 @@ TopAssistant.prototype.updateList = function() {
 		//For some reason, onSuccess never happens :(
 		onComplete: this.appendList
 	});
-}
+};
 
 /* Append the real processes to the Process List */
 TopAssistant.prototype.appendList = function(event) {
@@ -278,25 +278,33 @@ TopAssistant.prototype.appendList = function(event) {
 		var y = b;
 		if (this.sortPref == 'nodes')
 		{
-			x = parseInt(a.nodes);
-			y = parseInt(b.nodes);
+			x = parseInt(a.nodes,10);
+			y = parseInt(b.nodes,10);
 		}
 		else if (this.sortPref == 'serviceHandles')
 		{
-			x = parseInt(a.serviceHandles);
-			y = parseInt(b.serviceHandles);
+			x = parseInt(a.serviceHandles,10);
+			y = parseInt(b.serviceHandles,10);
 		}
 		else
 		{
 			return 0;
 		}
 		return ((x < y) ? 1 : (x > y) ? -1 : 0);
-	}
+	};
 	/* Array holding all the processes */
 	var processes = [];
 	var anonProcesses = [];
 	/* Loop over all the processes */
 	var docLength = event.documents.length;
+	/* Filter processes array, if filter is set */
+	var procFilter = function(app){
+		if (this.filter){
+			return app.processShort === this.filter;
+		}else{
+			return true;
+		}
+	};
 	for (var i = 0; i < docLength; i++)
 	{
 		var app = event.documents[i];
@@ -313,28 +321,21 @@ TopAssistant.prototype.appendList = function(event) {
 			var matchApp = nameShort.match(regApp);
 			if (typeof matchApp[1] !== "undefined" && typeof matchApp[1] !== "null") { nameShort = matchApp[1]; isPalm = false; }
 			var str = {
-				process:name
-				,processShort:nameShort
-				,processClass:(isPalm?'palm':'')
-				,pid:pid
-				,nodes:app.nodes
-				,serviceHandles:app.openServiceHandles
-				,url:app.url
-				,appId:app.appId
+				process:name,
+				processShort:nameShort,
+				processClass:(isPalm?'palm':''),
+				pid:pid,
+				nodes:app.nodes,
+				serviceHandles:app.openServiceHandles,
+				url:app.url,
+				appId:app.appId
 			};
 			/* about:blank is not useful */
 			if (app.url != "about:blank"){
 				processes.push(str);
 			}
 		}
-	/* Filter processes array, if filter is set */
-	var procFilter = function(app){
-		if (this.filter){
-			return app.processShort === this.filter;
-		}else{
-			return true;
-		}
-	};
+	}
 	/* Sort list */
 	processes = processes.sort(sorter.bind(this));
 	/* Filter processes */
@@ -344,20 +345,21 @@ TopAssistant.prototype.appendList = function(event) {
 	this.controller.get("top_list").mojo.noticeUpdatedItems(0,processes);
 	/* Update the Title with JavaScript Heap info */
 	/* 1.3.5 changed the JSON response, keeping backward compatibility with older devices */
+	var jsHeapSize, jsHeapCapacity;
 	if (typeof event.counters.jsHeap === "undefined")
 	{
-		var jsHeapSize = event.counters.jsHeapSize;
-		var jsHeapCapacity = event.counters.jsHeapCapacity;
+		jsHeapSize = event.counters.jsHeapSize;
+		jsHeapCapacity = event.counters.jsHeapCapacity;
 	}
 	else
 	{
-		var jsHeapSize = event.counters.jsHeap.used;
-		var jsHeapCapacity = event.counters.jsHeap.capacity;
+		jsHeapSize = event.counters.jsHeap.used;
+		jsHeapCapacity = event.counters.jsHeap.capacity;
 	}
 	//TODO: Useful metrics in new event.counters.jsHeap: see full_counter_api.txt
 	this.controller.get("heap_progress").update(this.formatSize(jsHeapSize));
 	this.controller.get("heap_progress").style.width = Math.round((jsHeapSize/jsHeapCapacity) * 100) + 'px';
-}
+};
 
 
 /* format bytes to easier to read value */
@@ -380,11 +382,11 @@ TopAssistant.prototype.formatSize = function(size)
 	
 	// return formatted size
 	return toReturn;
-}
+};
 
 /* Unfilter the list */
 TopAssistant.prototype.unfilter = function(){
 	if (this.filter) {
 		this.filter = undefined;
 	}
-}
+};
