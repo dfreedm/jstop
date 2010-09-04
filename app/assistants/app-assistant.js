@@ -1,14 +1,18 @@
 function AppAssistant() {
+    var bindThese = ["doGC","fireBanner","setWakeup"];
+    var binder = function(f) {
+        this[f] = this[f].bind(this);
+    }.bind(this);
+    bindThese.forEach(binder);
 }
 
-AppAssistant.prototype.setup = function(){
-}
+AppAssistant.prototype.setup = function(){};
 
 // Handle relaunch with parameters
 AppAssistant.prototype.handleLaunch = function(launchParams) {
     this.cookie = new Mojo.Model.Cookie("jstop");
     this.prefs = this.cookie.get();
-    if (this.prefs == null) {
+    if (this.prefs === null) {
         var temp = {autoGC:false,notif:true};
         this.cookie.put(temp);
         this.prefs = temp;
@@ -34,18 +38,13 @@ AppAssistant.prototype.handleLaunch = function(launchParams) {
     }
     // Launched from alarm
     else {
-        switch(launchParams.action){
-            case "doGC":
-                var f = this.doGC.bind(this);
-                f();
-                f = this.fireBanner.bind(this);
-                f();
-                f = this.setWakeup.bind(this);
-                f();
-            break;
+        if (launchParams.action === "doGC") {
+            this.doGC();
+            this.fireBanner();
+            this.setWakeup();
         }
     }
-}
+};
 
 // Setup the next alarm
 AppAssistant.prototype.setWakeup = function(){
@@ -63,10 +62,10 @@ AppAssistant.prototype.setWakeup = function(){
                 },
                 'in':"00:05:00"
             },
-        onSuccess:function(){Mojo.Log.error("set up")},
-        onFailure:function(event){Mojo.Log.error(event.errorText)}
+        onSuccess:function(){Mojo.Log.error("set up");},
+        onFailure:function(event){Mojo.Log.error(event.errorText);}
     });
-}
+};
 
 // Launch a gc
 AppAssistant.prototype.doGC = function(){
@@ -76,7 +75,7 @@ AppAssistant.prototype.doGC = function(){
         parameters: {},
         onComplete: Mojo.doNothing
     });
-}
+};
 
 // Fire the banner
 AppAssistant.prototype.fireBanner = function() {
@@ -86,4 +85,4 @@ AppAssistant.prototype.fireBanner = function() {
         var bannerParams = {messageText: "Auto GC'ed"};
         this.controller.showBanner(bannerParams, {}, "");
     }
-}
+};
