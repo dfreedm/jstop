@@ -20,7 +20,7 @@ AppAssistant.prototype.handleLaunch = function(launchParams) {
     // Create a new stage not attached the to dashboard
     var cardStageController = this.controller.getStageController("JSTop");
     var appController = Mojo.Controller.getAppController();
-    Mojo.Log.error("App Params: " + launchParams);
+    Mojo.Log.info("App Params: " + launchParams);
     // Probably launched from launcher
     if (!launchParams){
         if (cardStageController){
@@ -62,7 +62,7 @@ AppAssistant.prototype.setWakeup = function(){
                 },
                 'in':"00:05:00"
             },
-        onSuccess:function(){Mojo.Log.error("set up");},
+        onSuccess:function(){Mojo.Log.info("set up");},
         onFailure:function(event){Mojo.Log.error(event.errorText);}
     });
 };

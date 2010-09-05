@@ -271,7 +271,7 @@ TopAssistant.prototype.appendList = function(event) {
 	/* regex for splitting the process name */
 	var regPalm = new RegExp("^com\\.palm\\.(?:app\\.)?(.*)?");
 	var regApp = new RegExp("^(?:[^\\.]+\\.){2}(.*)?");
-	var regNamePid = new RegExp("(.+)s\\s(\\d+)");
+	var regNamePid = new RegExp("(.+)\\s(\\d+)");
 	/* sort by preference */
 	var sorter = function (a,b) {
 		var x = a;
@@ -319,7 +319,7 @@ TopAssistant.prototype.appendList = function(event) {
 			var isPalm = false;
 			var matchPalm = nameShort.match(regPalm); if (matchPalm) { nameShort = matchPalm[1]; isPalm = true; }
 			var matchApp = nameShort.match(regApp);
-			if (typeof matchApp[1] !== "undefined" && typeof matchApp[1] !== "null") { nameShort = matchApp[1]; isPalm = false; }
+			if (matchApp && matchApp[1]) { nameShort = matchApp[1]; isPalm = false; }
 			var str = {
 				process:name,
 				processShort:nameShort,
@@ -331,7 +331,7 @@ TopAssistant.prototype.appendList = function(event) {
 				appId:app.appId
 			};
 			/* about:blank is not useful */
-			if (app.url != "about:blank"){
+			if (app.url !== "about:blank"){
 				processes.push(str);
 			}
 		}
