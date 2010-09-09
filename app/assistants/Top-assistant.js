@@ -11,7 +11,7 @@ TopAssistant.prototype.setup = function() {
 	/* this function is for setup tasks that have to happen when the scene is first created */
 	this.cookie = new Mojo.Model.Cookie("jstop");
 	this.prefs = this.cookie.get();
-	if (this.prefs === null) {
+	if (!this.prefs) {
 		var temp = {autoGC:false,notif:true};
 		this.cookie.put(temp);
 		this.prefs = temp;
