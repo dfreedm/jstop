@@ -1,11 +1,12 @@
 {
 	"id": "com.palm.biz.sketchyplace.jstop",
-	"version": "0.2.7",
+	"version": "0.2.9",
 	"vendor": "SketchyPlace",
 	"type": "web",
 	"main": "index.html",
 	"title": "JSTop",
 	"icon": "icon.png",
+	"uiRevision": 2,
 	"removable": "true",
 	"noWindow" : "true"
 }
