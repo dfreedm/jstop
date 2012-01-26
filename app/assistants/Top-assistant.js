@@ -59,6 +59,16 @@ TopAssistant.prototype.setup = function() {
 			this.menuAutoGC
 		]
 	});
+	if (Mojo.Environment.DeviceInfo.platformVersionMajor > 2) {
+		this.cmdMenuModel = {
+			visible: false,
+			items: [
+				{iconPath: "/usr/palm/frameworks/mojocommon/images/menu-icon-back.png",	command: "cmdBackSwipe"},
+			]
+		};
+		this.controller.setupWidget(Mojo.Menu.commandMenu, {}, this.cmdMenuModel);
+	}
+	
 	/* add event handlers to listen to events from widgets */
 
 	/* Set up the listener for tapping on list items */
@@ -127,6 +137,9 @@ TopAssistant.prototype.handleCommand = function(event) {
 			case 'notif':
 				this.toggleNotifications();
 				break;
+			case "cmdBackSwipe":
+				this.backSwipe(event);
+				break;
 			default: break;
 		}
 	}
@@ -135,6 +148,14 @@ TopAssistant.prototype.handleCommand = function(event) {
 		this.unfilter();
 		this.appendList(this.lastList);
 	}
+};
+
+TopAssistant.prototype.backSwipe = function(event) {
+	this.cmdMenuModel.visible = false;
+	this.controller.modelChanged(this.cmdMenuModel);
+	event.stop();
+	this.unfilter();
+	this.appendList(this.lastList);
 };
 
 /* Show notifications? */
@@ -185,6 +206,10 @@ TopAssistant.prototype.handleTap = function(event) {
 	if (!this.filter){
 		this.filter = event.item.processShort;
 		this.appendList(this.lastList);
+		if (Mojo.Environment.DeviceInfo.platformVersionMajor > 2) {
+			this.cmdMenuModel.visible = true;
+			this.controller.modelChanged(this.cmdMenuModel);
+		}
 	}
 	else {
 		this.controller.showAlertDialog({
